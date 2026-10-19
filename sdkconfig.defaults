@@ -1,0 +1,6 @@
+# Reserve native USB Serial/JTAG for framed bidirectional traffic.
+# Keep application logs on the existing primary UART0 console.
+CONFIG_ESP_CONSOLE_UART_DEFAULT=y
+CONFIG_ESP_CONSOLE_SECONDARY_NONE=y
+# CONFIG_RETRO_USB_AUDIO_TEST_TONE is not set
+CONFIG_RETRO_USB_AUDIO_NES=y

@@ -1,0 +1,28 @@
+COPIAR EL CONTENIDO DE ESTA CARPETA A LA RAIZ DE LA SD.
+No copiar una carpeta filesys dentro de la SD.
+No borrar saves ni renombrar ROMs existentes.
+
+Raiz: inicio.gif, inicio.mp3 y sus preparados inicio.r53a/inicio.pcm.
+Consolas: NES, GameBoy, GameBoyColor.
+Cada consola: console.gif y console.r53a.
+Cada juego: una subcarpeta con la ROM y cover.png + cover.r53a.
+
+Ejemplo:
+GameBoyColor/Links Awakening DX/MISMO_NOMBRE_ACTUAL.gbc
+GameBoyColor/Links Awakening DX/cover.png
+GameBoyColor/Links Awakening DX/cover.r53a
+
+Los GIF/PNG/MP3 son fuentes. El firmware lee r53a/pcm.
+Al agregar o cambiar imagenes, ejecutar desde Retro53:
+python tools/prepare_ui_assets.py
+y copiar los archivos preparados a la SD.
+Las portadas se preparan a un maximo de 112x84, conservando proporcion.
+Sin portada se muestra SIN PORTADA. No se incluyen juegos ni portadas
+de juegos porque todavia no fueron proporcionados.
+
+GameBoyColor reutiliza la animacion de GameBoy si falta la propia.
+Las ROMs sueltas en las carpetas antiguas siguen funcionando.
+Los guardados siguen en sus rutas actuales dentro de saves.
+
+Se necesita flashear el firmware actualizado para estas rutas.
+El APK Android actual sigue siendo compatible.

@@ -1,0 +1,14 @@
+menu "Retro53 USB audio"
+config RETRO_USB_AUDIO_TEST_TONE
+    bool "Phase 2: USB transport test with 440 Hz tone"
+    default n
+    help
+        Generate a quiet tone independently of the emulators, including in
+        the launcher. Emulator PCM is not transmitted while this is enabled.
+config RETRO_USB_AUDIO_NES
+    bool "Enable NES USB audio (phase 4)"
+    default y
+    help
+        Send mono PCM from Nofrendo through the common USB audio queue.
+        GB/GBC audio remains available with the same transport and Android app.
+endmenu
