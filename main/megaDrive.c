@@ -364,10 +364,11 @@ static void convertir_frame(const uint8_t *src, uint16_t *dst)
         for (int x = 0; x < MD_VIDEO_WIDTH; ++x) {
             int sx = (x * MD_SOURCE_WIDTH) / MD_VIDEO_WIDTH;
             const uint8_t *pixel = src + ((sy * MD_SOURCE_WIDTH + sx) * 4);
+            // Gwenesis stores host pixels as B,G,R,padding.
             dst[y * MD_VIDEO_WIDTH + x] =
-                ((uint16_t)(pixel[0] & 0xf8) << 8) |
+                ((uint16_t)(pixel[2] & 0xf8) << 8) |
                 ((uint16_t)(pixel[1] & 0xfc) << 3) |
-                (pixel[2] >> 3);
+                (pixel[0] >> 3);
         }
     }
 }
@@ -442,6 +443,13 @@ if (err != ESP_OK)
                 fps,
                 (unsigned long)frame
             );
+
+            // Draw only once per second in the black upper margin.
+            // The framebuffer remains untouched and the display DMA
+            // buffers are reused by display_draw_text().
+            char fps_label[20];
+            snprintf(fps_label, sizeof(fps_label), "FPS: %4.1f", fps);
+            display_draw_text(4, 4, fps_label, 0xFFFF, 0x0000);
 
             frames_in_window = 0;
             last_report_us = now_us;
