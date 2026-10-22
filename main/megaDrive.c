@@ -59,7 +59,6 @@
 static uint16_t *framebuffers[FRAMEBUFFER_COUNT];
 extern int screen_height;
 static uint8_t *source_buffers[FRAMEBUFFER_COUNT];
-static uint16_t *dma_buffers[2];
 
 static QueueHandle_t free_frames;
 static QueueHandle_t ready_frames;
@@ -320,12 +319,14 @@ static void ejecutar_frame(
 }
 
 static void preparar_stripe_dma(
-    const uint16_t *src,
+    void *context,
     uint16_t *dst,
     int start_y,
-    int lines
+    int lines,
+    int width
 )
 {
+    const uint16_t *src = context;
     for (int y = 0; y < lines; y++)
     {
         const uint16_t *src_line =
@@ -341,7 +342,7 @@ static void preparar_stripe_dma(
             ];
 
         for (int x = 0;
-             x < MD_OUTPUT_WIDTH;
+             x < width;
              x++)
         {
             dst_line[x] =
@@ -377,8 +378,6 @@ static void convertir_frame(const uint8_t *src, uint16_t *dst)
 
 static void display_task(void *arg)
 {
-    int buffer_index = 0;
-
     uint32_t frame = 0;
     uint32_t frames_in_window = 0;
 
@@ -398,35 +397,13 @@ static void display_task(void *arg)
         uint16_t *framebuffer =
             framebuffers[frame_index];
 
-       for (int y = 0;
-     y < MD_OUTPUT_HEIGHT;
-     y += TFT_STRIPE_LINES)
-{
-    int lines = TFT_STRIPE_LINES;
-
-    if (y + lines > MD_OUTPUT_HEIGHT)
-    {
-        lines =
-            MD_OUTPUT_HEIGHT - y;
-    }
-
-    uint16_t *dma_buffer =
-        dma_buffers[buffer_index];
-
-    preparar_stripe_dma(
-        framebuffer,
-        dma_buffer,
-        y,
-        lines
-    );
-
- esp_err_t err =
-    display_draw_rgb565(
+        esp_err_t err = display_draw_rgb565_blocks(
         MD_X_OFFSET,
-        MD_Y_OFFSET + y,
+        MD_Y_OFFSET,
         MD_OUTPUT_WIDTH,
-        lines,
-        dma_buffer
+        MD_OUTPUT_HEIGHT,
+        preparar_stripe_dma,
+        framebuffer
     );
 
 if (err != ESP_OK)
@@ -438,8 +415,6 @@ if (err != ESP_OK)
     );
 }
 
-    buffer_index ^= 1;
-}
 
         // Llegamos acá cuando las 240 líneas
         // del frame ya fueron transmitidas.
@@ -772,32 +747,6 @@ bool megadrive_start(const char *rom_path)
         if (source_buffers[i] == NULL) {
             emulator_diag_set(EMU_DIAG_MEMORY, "Buffer RGB MD sin PSRAM");
             ESP_LOGE(TAG, "No pude reservar buffer RGB Gwenesis %d", i);
-            return false;
-        }
-    }
-
-    /*
-     * Buffers DMA del pipeline Mega Drive
-     */
-    for (int i = 0; i < 2; i++)
-    {
-        dma_buffers[i] =
-            heap_caps_malloc(
-                TFT_STRIPE_PIXELS *
-                    sizeof(uint16_t),
-                MALLOC_CAP_DMA |
-                MALLOC_CAP_INTERNAL
-            );
-
-        if (dma_buffers[i] == NULL)
-        {
-            emulator_diag_set(EMU_DIAG_MEMORY, "DMA interno MD insuficiente");
-            ESP_LOGE(
-                TAG,
-                "No pude reservar DMA buffer %d",
-                i
-            );
-
             return false;
         }
     }
