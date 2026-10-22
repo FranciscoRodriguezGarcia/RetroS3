@@ -768,7 +768,11 @@ static bool gameboy_start_internal(
 
     if (init_result != 0)
     {
-        emulator_diag_set(EMU_DIAG_CORE, "Inicializacion Gnuboy");
+        if (init_result == -2) {
+            emulator_diag_set(EMU_DIAG_MEMORY, "RAM/VRAM de Gnuboy");
+        } else {
+            emulator_diag_set(EMU_DIAG_CORE, "Inicializacion Gnuboy");
+        }
         ESP_LOGE(
             TAG,
             "gnuboy_init fallo: %d",
