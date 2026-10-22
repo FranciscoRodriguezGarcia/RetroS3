@@ -7,3 +7,8 @@ CONFIG_RETRO_USB_AUDIO_NES=y
 CONFIG_IDF_TARGET="esp32s3"
 CONFIG_COMPILER_OPTIMIZATION_PERF=y
 # CONFIG_COMPILER_OPTIMIZATION_DEBUG is not set
+
+# Frantastic NES allocates a large PPU framebuffer in PSRAM.
+CONFIG_SPIRAM_USE_MALLOC=y
+# Cartridge parsers signal invalid ROMs and unsupported mappers with exceptions.
+CONFIG_COMPILER_CXX_EXCEPTIONS=y

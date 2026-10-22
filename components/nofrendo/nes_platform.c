@@ -250,6 +250,21 @@ if (!nes_task_logged)
 
     int64_t end_us = esp_timer_get_time();
 
+    // FPS reales enviados al display, medidos en la misma ventana que
+    // el resto de cores. El margen superior esta fuera de la imagen NES.
+    static int64_t fps_window_start_us = 0;
+    static unsigned fps_frames = 0;
+    if (fps_window_start_us == 0) fps_window_start_us = end_us;
+    if (err == ESP_OK) ++fps_frames;
+    if (end_us - fps_window_start_us >= 1000000) {
+        char fps_text[20];
+        snprintf(fps_text, sizeof(fps_text), "FPS: %4.1f",
+                 fps_frames * 1000000.0 / (end_us - fps_window_start_us));
+        display_draw_text(4, 0, fps_text, 0xffff, 0x0000);
+        fps_frames = 0;
+        fps_window_start_us = end_us;
+    }
+
     // Acumular tiempos
     total_conversion_us += block.conversion_us;
     /* Conversion overlaps DMA: the remainder is not physical SPI time. */

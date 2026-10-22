@@ -645,6 +645,12 @@ static void gameboy_display_task(
                 (unsigned long)frames
             );
 
+            if (!atomic_load(&gb_save_error)) {
+                char fps_text[20];
+                snprintf(fps_text, sizeof(fps_text), "FPS: %4.1f", fps);
+                display_draw_text(4, 231, fps_text, 0xffff, 0x0000);
+            }
+
             frames_in_window = 0;
             last_report_us = now_us;
         }

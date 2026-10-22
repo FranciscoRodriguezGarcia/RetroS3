@@ -7,6 +7,14 @@
 #include "nes.h"
 #include "emulator_diag.h"
 #include "status_led.h"
+#include "nes_frantastic.h"
+
+static nes_core_t selected_core = NES_CORE_NOFRENDO;
+
+void nes_set_core(nes_core_t core)
+{
+    selected_core = core;
+}
 
 bool nes_start(const char *rom_path)
 {
@@ -15,6 +23,14 @@ bool nes_start(const char *rom_path)
         emulator_diag_set(EMU_DIAG_ROM_INVALID, "Ruta NES vacia");
         status_led_set_mode(STATUS_LED_OFF);
         return false;
+    }
+
+    if (selected_core == NES_CORE_FRANTASTIC)
+    {
+        status_led_set_mode(STATUS_LED_HEARTBEAT);
+        bool ok = nes_frantastic_start(rom_path);
+        status_led_set_mode(STATUS_LED_OFF);
+        return ok;
     }
 
     char *argv[] = {

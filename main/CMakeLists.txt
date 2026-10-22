@@ -12,6 +12,7 @@ idf_component_register(
         "input.c"
         "gameboy.c"
         "nes.c"
+        "nes_frantastic.cpp"
         "megaDrive.c"
         "status_led.c"
     INCLUDE_DIRS "."
@@ -19,6 +20,7 @@ idf_component_register(
         retro_audio
         gnuboy
         nofrendo
+        frantastic_nes
         gwenesis
         fatfs
         sdmmc
@@ -29,3 +31,6 @@ idf_component_register(
         esp_driver_usb_serial_jtag
         driver
 )
+
+# The NES integration catches std::exception from the standalone core.
+target_compile_options(${COMPONENT_LIB} PRIVATE -fexceptions)

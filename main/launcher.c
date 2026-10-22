@@ -10,6 +10,7 @@
 #include "display.h"
 #include "input.h"
 #include "emulator_manager.h"
+#include "nes.h"
 #include "emulator_diag.h"
 #include "status_led.h"
 #include "esp_heap_caps.h"
@@ -24,6 +25,8 @@ static bool console_attempted[SYSTEM_MEGADRIVE + 1];
 static ui_animation_t *game_cover;
 static char game_cover_path[ROM_PATH_MAX];
 static bool error_visible;
+static bool selecting_nes_core;
+static nes_core_t chosen_nes_core = NES_CORE_NOFRENDO;
 #define TITLE_COLUMNS 24
 static struct {
     char text[ROM_NAME_MAX];
@@ -52,6 +55,15 @@ static void launcher_render(void);
 static void launcher_render_systems(void);
 static void launcher_render_roms(void);
 static void launcher_task(void *arg);
+static void launcher_render_nes_core_choice(void)
+{
+    display_fill_rect(0, 0, 320, 240, UI_BG);
+    display_draw_text(44, 35, "ELEGIR CORE PARA NES", 0xffff, UI_BG);
+    display_draw_text(30, 86, "NOFRENDO", chosen_nes_core == NES_CORE_NOFRENDO ? UI_ACCENT : 0xffff, UI_BG);
+    display_draw_text(30, 119, "FRANTASTIC", chosen_nes_core == NES_CORE_FRANTASTIC ? UI_ACCENT : 0xffff, UI_BG);
+    display_draw_text(30, 174, "ARRIBA/ABAJO: ELEGIR", 0xffff, UI_BG);
+    display_draw_text(30, 195, "A: JUGAR  B: VOLVER", 0xffff, UI_BG);
+}
 static void launcher_render_error(const rom_entry_t *rom)
 {
     const uint16_t bg = UI_COLOR(0x1083);
@@ -125,6 +137,23 @@ static const rom_entry_t *launcher_get_selected_rom(void)
 
     return NULL;
 }
+static void launcher_start_selected_rom(void)
+{
+    const rom_entry_t *rom = launcher_get_selected_rom();
+    if (!rom) return;
+
+    ESP_LOGI(TAG, "Lanzando: %s", rom->path);
+    launcher_release_media();
+    display_clear();
+
+    if (!emulator_manager_start(rom)) {
+        error_visible = true;
+        launcher_render_error(rom);
+    } else if (!emulator_manager_is_running()) {
+        // Synchronous NES cores return here after exiting.
+        launcher_render();
+    }
+}
 //-------------------------------------
 static void launcher_task(void *arg)
 {
@@ -146,7 +175,10 @@ static void launcher_task(void *arg)
         }
         if (input_consume_menu_request())
 {
-    if (state.screen == LAUNCHER_SCREEN_ROMS)
+    if (selecting_nes_core) {
+        selecting_nes_core = false;
+        launcher_render();
+    } else if (state.screen == LAUNCHER_SCREEN_ROMS)
     {
         state.screen = LAUNCHER_SCREEN_SYSTEMS;
         state.selected_rom_index = 0;
@@ -170,6 +202,25 @@ static void launcher_task(void *arg)
             if (pressed & (INPUT_BUTTON_A | INPUT_BUTTON_B)) {
                 error_visible = false;
                 launcher_render();
+            }
+            previous_state = current_state;
+            vTaskDelay(pdMS_TO_TICKS(20));
+            continue;
+        }
+
+        if (selecting_nes_core) {
+            if (pressed & INPUT_BUTTON_B) {
+                selecting_nes_core = false;
+                launcher_render();
+            } else if (pressed & (INPUT_BUTTON_UP | INPUT_BUTTON_DOWN |
+                                  INPUT_BUTTON_LEFT | INPUT_BUTTON_RIGHT)) {
+                chosen_nes_core = chosen_nes_core == NES_CORE_NOFRENDO
+                    ? NES_CORE_FRANTASTIC : NES_CORE_NOFRENDO;
+                launcher_render_nes_core_choice();
+            } else if (pressed & INPUT_BUTTON_A) {
+                selecting_nes_core = false;
+                nes_set_core(chosen_nes_core);
+                launcher_start_selected_rom();
             }
             previous_state = current_state;
             vTaskDelay(pdMS_TO_TICKS(20));
@@ -258,19 +309,11 @@ static void launcher_task(void *arg)
 
                 if (rom != NULL)
                 {
-                    ESP_LOGI(
-                        TAG,
-                        "Lanzando: %s",
-                        rom->path
-                    );
-
-                    launcher_release_media();
-                    display_clear();
-
-                   if (!emulator_manager_start(rom))
-                    {
-                        error_visible = true;
-                        launcher_render_error(rom);
+                    if (rom->system == SYSTEM_NES) {
+                        selecting_nes_core = true;
+                        launcher_render_nes_core_choice();
+                    } else {
+                        launcher_start_selected_rom();
                     }
                 }
             }
