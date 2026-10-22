@@ -76,23 +76,23 @@ static bool agregar_rom(
         return false;
     }
 
+    const size_t folder_len = strlen(folder);
+    const size_t filename_len = strlen(filename);
+
+    if (filename_len >= ROM_NAME_MAX ||
+        folder_len + 1 + filename_len >= ROM_PATH_MAX)
+    {
+        ESP_LOGW(TAG, "Nombre o ruta de ROM demasiado largo: %s", filename);
+        return false;
+    }
+
     rom_entry_t *entry =
         &list->entries[list->count];
 
-    snprintf(
-        entry->name,
-        sizeof(entry->name),
-        "%s",
-        filename
-    );
-
-    snprintf(
-        entry->path,
-        sizeof(entry->path),
-        "%s/%s",
-        folder,
-        filename
-    );
+    memcpy(entry->name, filename, filename_len + 1);
+    memcpy(entry->path, folder, folder_len);
+    entry->path[folder_len] = '/';
+    memcpy(entry->path + folder_len + 1, filename, filename_len + 1);
 
     entry->system = system;
 
