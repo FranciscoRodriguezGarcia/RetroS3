@@ -92,7 +92,7 @@ static void rom_savesram(rominfo_t *rominfo)
 
    if (rominfo->flags & ROM_FLAG_BATTERY)
    {
-      strncpy(fn, rominfo->filename, PATH_MAX);
+      snprintf(fn, sizeof(fn), "%s", rominfo->filename);
       osd_newextension(fn, ".sav");
 
       fp = fopen(fn, "wb");
@@ -115,7 +115,7 @@ static void rom_loadsram(rominfo_t *rominfo)
 
    if (rominfo->flags & ROM_FLAG_BATTERY)
    {
-      strncpy(fn, rominfo->filename, PATH_MAX);
+      snprintf(fn, sizeof(fn), "%s", rominfo->filename);
       osd_newextension(fn, ".sav");
 
       fp = fopen(fn, "rb");
@@ -403,9 +403,9 @@ char *rom_getinfo(rominfo_t *rominfo)
    /* Look to see if we were given a path along with filename */
    /* TODO: strip extensions */
    if (strrchr(rominfo->filename, PATH_SEP))
-      strncpy(romname, strrchr(rominfo->filename, PATH_SEP) + 1, PATH_MAX);
+      snprintf(romname, sizeof(romname), "%s", strrchr(rominfo->filename, PATH_SEP) + 1);
    else
-      strncpy(romname, rominfo->filename, PATH_MAX);
+      snprintf(romname, sizeof(romname), "%s", rominfo->filename);
 
    /* If our filename is too long, truncate our displayed filename */
    if (strlen(romname) > ROM_DISP_MAXLEN)
