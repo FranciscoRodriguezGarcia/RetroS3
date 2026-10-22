@@ -33,8 +33,10 @@ not recognized because this loader does not convert their format.
 
 `components/gwenesis` is vendored from `bzhxx/gwenesis` at commit
 `168e46661a086a0b793a9ee127a206604ebe7df1` with ESP32-S3 integration
-changes. Preserve its GPLv3 licensing notices. It is separate from the
-privately developed Frantastic cores.
+changes. Its upstream `LICENSE` file contains AGPLv3 text, while individual
+source headers mention GPLv3; keep the notices intact and review obligations
+before distributing firmware. It is separate from the privately developed
+Frantastic cores.
 
 ## Performance measurement
 
