@@ -17,7 +17,7 @@
 
 static const char *TAG = "FRANTASTIC";
 
-static rom_list_t roms;
+static rom_list_t *roms = NULL;
 
 void app_main(void)
 {
@@ -113,7 +113,17 @@ else
     // ROM Manager
     // -----------------------------
 
-    if (!rom_manager_scan(&roms))
+    // The ROM catalog is ~25 KiB; keep native DRAM for cores and DMA.
+    roms = (rom_list_t *)heap_caps_calloc(1, sizeof(*roms),
+                                         MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (!roms)
+    {
+        ESP_LOGE(TAG, "Sin PSRAM para catalogo ROM (%u bytes)",
+                 (unsigned)sizeof(*roms));
+        return;
+    }
+
+    if (!rom_manager_scan(roms))
     {
         ESP_LOGE(
             TAG,
@@ -123,18 +133,18 @@ else
     }
 
     for (size_t i = 0;
-         i < roms.count;
+         i < roms->count;
          i++)
     {
         ESP_LOGI(
             TAG,
             "[%u] %s | %s | %u bytes",
             (unsigned)i,
-            roms.entries[i].name,
+            roms->entries[i].name,
             rom_manager_system_name(
-                roms.entries[i].system
+                roms->entries[i].system
             ),
-            (unsigned)roms.entries[i].size
+            (unsigned)roms->entries[i].size
         );
     }
 
@@ -144,7 +154,7 @@ else
      *
      * Después esto lo reemplaza el launcher.
      */
-    if (roms.count == 0)
+    if (roms->count == 0)
     {
         ESP_LOGW(
             TAG,
@@ -155,7 +165,7 @@ else
 // Launcher
 // ------------------------------------------------
 
-if (!launcher_start(&roms))
+if (!launcher_start(roms))
 {
     ESP_LOGE(
         TAG,
