@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdlib.h>
+#include "esp_heap_caps.h"
 #include "gnuboy.h"
 #include "sound.h"
 #include "cpu.h"
@@ -208,8 +209,10 @@ void gb_hw_setpad(int new_pad)
 
 bool gb_hw_init(void)
 {
-	hw.rambanks = calloc(8, 4096);
-	hw.vbanks = calloc(2, 8192);
+    /* Cart RAM/VRAM need 48 KiB; keep internal heap available for
+     * FreeRTOS, DMA and peripheral drivers on ESP32-S3. */
+    hw.rambanks = heap_caps_calloc(8, 4096, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    hw.vbanks = heap_caps_calloc(2, 8192, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
 	hw.snd = gb_sound_init();
 	hw.cpu = gb_cpu_init();
 	hw.cart = &cart;
@@ -217,6 +220,8 @@ bool gb_hw_init(void)
 
 	if (!hw.rambanks || !hw.vbanks || !hw.cpu || !hw.snd)
 	{
+        if (hw.rambanks) { heap_caps_free(hw.rambanks); hw.rambanks = NULL; }
+        if (hw.vbanks) { heap_caps_free(hw.vbanks); hw.vbanks = NULL; }
 		// hw_deinit();
 		return false;
 	}
