@@ -1,4 +1,5 @@
 #include "gameboy.h"
+#include "emulator_diag.h"
 #include "retro_audio.h"
 
 /* Fixed mono buffer; gnuboy_set_soundbuffer and callback use sample counts. */
@@ -211,6 +212,7 @@ static unsigned char *gameboy_load_rom(
 
     if (f == NULL)
     {
+        emulator_diag_set(EMU_DIAG_SD_OPEN, "No se pudo abrir archivo GB");
         ESP_LOGE(
             TAG,
             "No pude abrir ROM: %s",
@@ -231,6 +233,7 @@ static unsigned char *gameboy_load_rom(
 
     if (size <= 0)
     {
+        emulator_diag_set(EMU_DIAG_ROM_INVALID, "Tamano GB invalido");
         ESP_LOGE(
             TAG,
             "Tamanio ROM invalido"
@@ -258,6 +261,7 @@ static unsigned char *gameboy_load_rom(
 
     if (buffer == NULL)
     {
+        emulator_diag_set(EMU_DIAG_MEMORY, "PSRAM para archivo GB");
         ESP_LOGE(
             TAG,
             "No pude reservar PSRAM para ROM"
@@ -280,6 +284,7 @@ static unsigned char *gameboy_load_rom(
 
     if (read != (size_t)size)
     {
+        emulator_diag_set(EMU_DIAG_SD_READ, "Lectura incompleta GB");
         ESP_LOGE(
             TAG,
             "Lectura incompleta: %u/%ld",
@@ -666,7 +671,7 @@ static bool gameboy_start_internal(
     const char *rom_path
 )
 {
-    if (!rom_path) return false;
+    if (!rom_path) { emulator_diag_set(EMU_DIAG_ROM_INVALID, "Ruta GB vacia"); return false; }
     const char *name = strrchr(rom_path, '/');
     name = name ? name + 1 : rom_path;
     const char *extension = strrchr(name, '.');
@@ -674,7 +679,10 @@ static bool gameboy_start_internal(
     const char *system = extension && strcasecmp(extension, ".gbc") == 0 ? "gbc" : "gb";
     int length = snprintf(gb_save_path, sizeof(gb_save_path),
                           SD_MOUNT_POINT "/saves/%s/%.*s.sav", system, (int)stem, name);
-    if (length < 0 || length >= sizeof(gb_save_path) - 4) return false;
+    if (length < 0 || length >= sizeof(gb_save_path) - 4) {
+        emulator_diag_set(EMU_DIAG_SAVE, "Nombre de save muy largo");
+        return false;
+    }
     snprintf(gb_temp_path, sizeof(gb_temp_path), "%s.tmp", gb_save_path);
     snprintf(gb_backup_path, sizeof(gb_backup_path), "%s.bak", gb_save_path);
     atomic_store(&gb_save_error, false);
@@ -719,6 +727,7 @@ static bool gameboy_start_internal(
 
         if (gb_framebuffers[i] == NULL)
         {
+            emulator_diag_set(EMU_DIAG_MEMORY, "Framebuffer GB sin PSRAM");
             ESP_LOGE(
                 TAG,
                 "No pude reservar framebuffer GB %d",
@@ -759,6 +768,7 @@ static bool gameboy_start_internal(
 
     if (init_result != 0)
     {
+        emulator_diag_set(EMU_DIAG_CORE, "Inicializacion Gnuboy");
         ESP_LOGE(
             TAG,
             "gnuboy_init fallo: %d",
@@ -789,6 +799,7 @@ static bool gameboy_start_internal(
 
     if (rom_result != 0)
     {
+        emulator_diag_set(EMU_DIAG_CORE, "Gnuboy rechaza ROM");
         ESP_LOGE(
             TAG,
             "gnuboy_load_rom fallo: %d",
@@ -819,6 +830,7 @@ static bool gameboy_start_internal(
     gnuboy_reset(true);
     if (!gameboy_load_save())
     {
+        emulator_diag_set(EMU_DIAG_SAVE, "No se pudo cargar partida");
         ESP_LOGE(TAG, "No pude recuperar la partida; inicio cancelado para protegerla");
         gnuboy_free_rom();
         gameboy_free_framebuffers();
@@ -852,6 +864,7 @@ static bool gameboy_start_internal(
     if (gb_free_frames == NULL ||
         gb_ready_frames == NULL)
     {
+        emulator_diag_set(EMU_DIAG_MEMORY, "Colas FreeRTOS GB");
         ESP_LOGE(
             TAG,
             "No pude crear queues GB"
@@ -930,6 +943,7 @@ static bool gameboy_start_internal(
 
     if (display_result != pdPASS)
     {
+        emulator_diag_set(EMU_DIAG_TASK, "Tarea display GB");
         ESP_LOGE(
             TAG,
             "No pude crear gameboy_display_task"
@@ -957,6 +971,7 @@ static bool gameboy_start_internal(
 
     if (emu_result != pdPASS)
     {
+        emulator_diag_set(EMU_DIAG_TASK, "Tarea emulacion GB");
         ESP_LOGE(
             TAG,
             "No pude crear gameboy_task"
