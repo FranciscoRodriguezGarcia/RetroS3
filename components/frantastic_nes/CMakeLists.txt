@@ -28,3 +28,5 @@ idf_component_register(
 
 # Frantastic NES uses C++ exceptions for ROM validation and mapper errors.
 target_compile_options(${COMPONENT_LIB} PRIVATE -fexceptions)
+
+target_compile_features(${COMPONENT_LIB} PUBLIC cxx_std_17)
