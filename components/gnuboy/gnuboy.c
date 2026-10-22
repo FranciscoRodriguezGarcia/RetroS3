@@ -29,7 +29,7 @@ int gnuboy_init(int samplerate, gb_audio_fmt_t audio_fmt, gb_video_fmt_t video_f
 		.audio.callback = audio_callback,
 	};
 	if (!gb_hw_init())
-		return -1;
+		return -2; /* hardware memory allocation failed */
 	return 0;
 }
 
