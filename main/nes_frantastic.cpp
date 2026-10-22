@@ -8,10 +8,12 @@
 #include <new>
 
 #include "frantastic/nes/NES.hpp"
+extern "C" {
 #include "display.h"
 #include "emulator_diag.h"
 #include "input.h"
 #include "retro_audio.h"
+}
 #include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "esp_timer.h"

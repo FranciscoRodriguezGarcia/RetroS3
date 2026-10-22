@@ -8,7 +8,16 @@ CONFIG_IDF_TARGET="esp32s3"
 CONFIG_COMPILER_OPTIMIZATION_PERF=y
 # CONFIG_COMPILER_OPTIMIZATION_DEBUG is not set
 
-# Frantastic NES allocates a large PPU framebuffer in PSRAM.
+# Frantastic NES allocates its large PPU framebuffer in PSRAM.
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_OCT=y
+CONFIG_SPIRAM_SPEED_80M=y
 CONFIG_SPIRAM_USE_MALLOC=y
+# CONFIG_SPIRAM_USE_CAPS_ALLOC is not set
 # Cartridge parsers signal invalid ROMs and unsupported mappers with exceptions.
 CONFIG_COMPILER_CXX_EXCEPTIONS=y
+
+# Keep existing Retro53 firmware settings from local PSRAM configuration.
+CONFIG_PARTITION_TABLE_SINGLE_APP_LARGE=y
+CONFIG_ESP_INT_WDT_TIMEOUT_MS=300
+CONFIG_FATFS_LFN_HEAP=y

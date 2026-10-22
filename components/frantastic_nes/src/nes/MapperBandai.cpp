@@ -122,9 +122,11 @@ void MapperBandai::cpuWrite(std::uint16_t a,std::uint8_t v) {
         if(irqEnabled_ && !fcg_) irqCounter_=irqLatch_;
         break;
     case 11:irqLatch_=static_cast<std::uint16_t>((irqLatch_&0xFF00u)|v);
-        if(fcg_) irqCounter_=static_cast<std::uint16_t>((irqCounter_&0xFF00u)|v);break;
+        if(fcg_) { irqCounter_=static_cast<std::uint16_t>((irqCounter_&0xFF00u)|v); }
+        break;
     case 12:irqLatch_=static_cast<std::uint16_t>((irqLatch_&0x00FFu)|(v<<8));
-        if(fcg_) irqCounter_=static_cast<std::uint16_t>((irqCounter_&0x00FFu)|(v<<8));break;
+        if(fcg_) { irqCounter_=static_cast<std::uint16_t>((irqCounter_&0x00FFu)|(v<<8)); }
+        break;
     case 13:
         if(hasWram_) ramEnabled_=(v&0x20u)!=0;
         else if(hasEeprom_) eepromWriteLines(v);
