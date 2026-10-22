@@ -6,6 +6,7 @@ idf_component_register(
         "display.c"
         "rom_manager.c"
         "emulator_manager.c"
+        "emulator_diag.c"
         "launcher.c"
         "ui_media.c"
         "input.c"
