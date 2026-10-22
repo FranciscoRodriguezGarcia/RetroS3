@@ -5,12 +5,14 @@
 #include "input.h"
 #include "nofrendo.h"
 #include "nes.h"
+#include "emulator_diag.h"
 #include "status_led.h"
 
 bool nes_start(const char *rom_path)
 {
     if (rom_path == NULL)
     {
+        emulator_diag_set(EMU_DIAG_ROM_INVALID, "Ruta NES vacia");
         status_led_set_mode(STATUS_LED_OFF);
         return false;
     }
@@ -25,6 +27,10 @@ bool nes_start(const char *rom_path)
     printf("NES: iniciando %s\n", rom_path);
 
     int result = nofrendo_main(2, argv);
+
+    if (result != 0) {
+        emulator_diag_set(EMU_DIAG_CORE, "Nofrendo fallo al iniciar");
+    }
 
     printf("NES: finalizado, codigo=%d\n", result);
     status_led_set_mode(STATUS_LED_OFF);
