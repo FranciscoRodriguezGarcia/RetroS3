@@ -45,6 +45,11 @@
 #include <stdint.h>
 #include "esp_system.h"
 
+/* Platform-owned on-screen diagnostic, no USB/serial monitor required. */
+extern void osd_nes_perf_overlay(double emu_fps, double draw_fps,
+                                 double skip_pct, double core_ms,
+                                 double video_ms);
+
 #define  NES_CLOCK_DIVIDER    12
 //#define  NES_MASTER_CLOCK     21477272.727272727272
 #define  NES_MASTER_CLOCK     (236250000 / 11)
@@ -378,6 +383,8 @@ void nes_emulate(void)
    unsigned int stats_start_blits = osd_get_video_blit_count();
    unsigned int skipped_frames = 0, rendered_frames = 0;
    int64_t skipped_us = 0, rendered_us = 0;
+   int64_t video_us = 0;
+   unsigned int video_frames = 0;
    unsigned int delay_calls = 0;
    int64_t delay_us = 0;
 
@@ -433,7 +440,10 @@ printf("NES: entrando al bucle principal\n");
         osd_audio_frame();
         rendered_us += esp_timer_get_time() - render_start_us;
         rendered_frames++;
+        int64_t video_start_us = esp_timer_get_time();
         system_video(true);
+        video_us += esp_timer_get_time() - video_start_us;
+        ++video_frames;
     }
 
     /* Wall time includes video, scheduling and pauses; render timings do not
@@ -445,6 +455,14 @@ printf("NES: entrando al bucle principal\n");
         unsigned int stats_blits = osd_get_video_blit_count();
         unsigned int emulated_frames = skipped_frames + rendered_frames;
         double seconds = (stats_now_us - stats_start_us) / 1000000.0;
+        const double emu_fps = emulated_frames / seconds;
+        const double draw_fps = (stats_blits - stats_start_blits) / seconds;
+        const double skip_pct = emulated_frames
+            ? 100.0 * skipped_frames / emulated_frames : 0.0;
+        const double core_ms = rendered_frames
+            ? rendered_us / (1000.0 * rendered_frames) : 0.0;
+        const double video_ms = video_frames
+            ? video_us / (1000.0 * video_frames) : 0.0;
         printf("NES EMU: emu=%.2f fps draw=%.2f fps ticks=%.2f Hz "
                "frames=%u skipped=%u (%.1f%%) "
                "render(false)=%.3f ms n=%u render(true)=%.3f ms n=%u "
@@ -464,11 +482,15 @@ printf("NES: entrando al bucle principal\n");
                delay_calls, delay_us / 1000.0,
                delay_calls ? delay_us / (1000.0 * delay_calls) : 0.0,
                100.0 * delay_us / (stats_now_us - stats_start_us));
-        stats_start_us = stats_now_us;
+        osd_nes_perf_overlay(emu_fps, draw_fps, skip_pct,
+                             core_ms, video_ms);
+        stats_start_us = esp_timer_get_time();
         stats_start_ticks = stats_ticks;
         stats_start_blits = stats_blits;
         skipped_frames = rendered_frames = 0;
         skipped_us = rendered_us = 0;
+        video_us = 0;
+        video_frames = 0;
         delay_calls = 0;
         delay_us = 0;
     }

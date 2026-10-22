@@ -174,6 +174,31 @@ static void nes_video_palette(rgb_t *palette)
 
 
 static unsigned int video_blit_count;
+/* Diagnostics accumulate only during successful block display calls. */
+static int64_t perf_conversion_us;
+static int64_t perf_draw_us;
+static unsigned perf_draw_frames;
+
+/* Called from the NES emulation loop every two seconds. */
+void osd_nes_perf_overlay(double emu_fps, double draw_fps, double skip_pct,
+                          double core_ms, double video_ms)
+{
+    const double convert_ms = perf_draw_frames
+        ? (double)perf_conversion_us / (1000.0 * perf_draw_frames) : 0.0;
+    const double transfer_ms = perf_draw_frames
+        ? (double)perf_draw_us / (1000.0 * perf_draw_frames) : 0.0;
+    char top[48];
+    char bottom[54];
+    snprintf(top, sizeof(top), "E:%4.1f D:%4.1f SK:%3.0f%%",
+             emu_fps, draw_fps, skip_pct);
+    snprintf(bottom, sizeof(bottom), "C:%4.1f V:%4.1f X:%4.1f T:%4.1f",
+             core_ms, video_ms, convert_ms, transfer_ms);
+    /* Both labels use the two 8-pixel margins outside the 224-pixel game. */
+    display_draw_text(4, 0, top, 0xffff, 0x0000);
+    display_draw_text(4, 232, bottom, 0xffff, 0x0000);
+    perf_conversion_us = perf_draw_us = 0;
+    perf_draw_frames = 0;
+}
 
 unsigned int osd_get_video_blit_count(void)
 {
@@ -250,19 +275,10 @@ if (!nes_task_logged)
 
     int64_t end_us = esp_timer_get_time();
 
-    // FPS reales enviados al display, medidos en la misma ventana que
-    // el resto de cores. El margen superior esta fuera de la imagen NES.
-    static int64_t fps_window_start_us = 0;
-    static unsigned fps_frames = 0;
-    if (fps_window_start_us == 0) fps_window_start_us = end_us;
-    if (err == ESP_OK) ++fps_frames;
-    if (end_us - fps_window_start_us >= 1000000) {
-        char fps_text[20];
-        snprintf(fps_text, sizeof(fps_text), "FPS: %4.1f",
-                 fps_frames * 1000000.0 / (end_us - fps_window_start_us));
-        display_draw_text(4, 0, fps_text, 0xffff, 0x0000);
-        fps_frames = 0;
-        fps_window_start_us = end_us;
+    if (err == ESP_OK) {
+        perf_conversion_us += block.conversion_us;
+        perf_draw_us += end_us - start_us;
+        ++perf_draw_frames;
     }
 
     // Acumular tiempos
