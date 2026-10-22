@@ -3,6 +3,7 @@
 #include "gameboy.h"
 #include "nes.h"
 #include "megaDrive.h"
+#include "emulator_diag.h"
 
 #include "esp_log.h"
 #include <stdatomic.h>
@@ -13,13 +14,16 @@ static atomic_bool running = false;
 
 bool emulator_manager_start(const rom_entry_t *rom)
 {
+    emulator_diag_clear();
     if (rom == NULL)
     {
+        emulator_diag_set(EMU_DIAG_ROM_INVALID, "ROM no seleccionada");
         return false;
     }
 
     if (running)
     {
+        emulator_diag_set(EMU_DIAG_CORE, "Ya hay un emulador activo");
         ESP_LOGW(TAG, "Ya hay un emulador activo");
         return false;
     }
@@ -49,6 +53,7 @@ bool emulator_manager_start(const rom_entry_t *rom)
             break;
 
         default:
+            emulator_diag_set(EMU_DIAG_CORE, "Sistema sin emulador");
             ESP_LOGW(
                 TAG,
                 "Sistema no implementado: %s",
@@ -57,6 +62,10 @@ bool emulator_manager_start(const rom_entry_t *rom)
             return false;
     }
 
+    if (!ok && emulator_diag_code() == EMU_DIAG_NONE)
+    {
+        emulator_diag_set(EMU_DIAG_UNKNOWN, "Consultar error del core");
+    }
     if (rom->system != SYSTEM_NES)
 {
     running = ok;
