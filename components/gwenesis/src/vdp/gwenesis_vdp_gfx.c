@@ -19,6 +19,7 @@ __license__ = "GPLv3"
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include "m68k.h"
 #include "gwenesis_vdp.h"
 #include "gwenesis_io.h"
@@ -33,16 +34,11 @@ __license__ = "GPLv3"
 
 #if GNW_TARGET_MARIO != 0 | GNW_TARGET_ZELDA != 0
 
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
 #include "stm32h7b0xx.h"
 extern unsigned char* VRAM;
 
 #else
 
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
-typedef unsigned int uint32_t;
 extern unsigned char VRAM[];
 
 #endif
