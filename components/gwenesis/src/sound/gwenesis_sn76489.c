@@ -71,6 +71,10 @@ static const int PSGVolumeValues[16] = {
 
 static SN76489_Context gwenesis_SN76489;
 
+/* PSG sample cursor and emulated clock, shared with the audio mixer. */
+int sn76489_index = 0;
+int sn76489_clock = 0;
+
 void gwenesis_SN76489_Init( int PSGClockValue, int SamplingRate,int freq_divisor)
 {
     gwenesis_SN76489.dClock=(float)PSGClockValue/16/SamplingRate;
