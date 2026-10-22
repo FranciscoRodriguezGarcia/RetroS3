@@ -10,7 +10,9 @@
 #include "display.h"
 #include "input.h"
 #include "emulator_manager.h"
+#include "emulator_diag.h"
 #include "status_led.h"
+#include "esp_heap_caps.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -21,6 +23,7 @@ static ui_animation_t *console_media[SYSTEM_MEGADRIVE + 1];
 static bool console_attempted[SYSTEM_MEGADRIVE + 1];
 static ui_animation_t *game_cover;
 static char game_cover_path[ROM_PATH_MAX];
+static bool error_visible;
 #define TITLE_COLUMNS 24
 static struct {
     char text[ROM_NAME_MAX];
@@ -49,6 +52,28 @@ static void launcher_render(void);
 static void launcher_render_systems(void);
 static void launcher_render_roms(void);
 static void launcher_task(void *arg);
+static void launcher_render_error(const rom_entry_t *rom)
+{
+    const uint16_t bg = UI_COLOR(0x1083);
+    const uint16_t red = UI_COLOR(0xf800);
+    display_fill_rect(0, 0, 320, 240, bg);
+    display_fill_rect(0, 0, 320, 32, red);
+    display_draw_text(30, 12, "ERROR AL INICIAR ROM", 0xffff, red);
+
+    char line[48];
+    snprintf(line, sizeof(line), "CONSOLA: %s", rom_manager_system_name(rom->system));
+    display_draw_text(12, 51, line, 0xffff, bg);
+    display_draw_text(12, 76, emulator_diag_label(), red, bg);
+    snprintf(line, sizeof(line), "%.46s", emulator_diag_detail());
+    display_draw_text(12, 103, line, 0xffff, bg);
+
+    snprintf(line, sizeof(line), "ROM: %.39s", rom->name);
+    display_draw_text(12, 130, line, 0xffff, bg);
+    snprintf(line, sizeof(line), "PSRAM LIBRE: %u KB",
+             (unsigned)(heap_caps_get_free_size(MALLOC_CAP_SPIRAM) / 1024));
+    display_draw_text(12, 157, line, 0xffff, bg);
+    display_draw_text(52, 211, "A: VOLVER A ROMS", 0xffff, bg);
+}
 static void launcher_title_tick(void)
 {
     if (title_scroll.length<=TITLE_COLUMNS || esp_timer_get_time()<title_scroll.next_us) return;
@@ -140,6 +165,16 @@ static void launcher_task(void *arg)
         input_state_t pressed =
             current_state &
             ~previous_state;
+
+        if (error_visible) {
+            if (pressed & (INPUT_BUTTON_A | INPUT_BUTTON_B)) {
+                error_visible = false;
+                launcher_render();
+            }
+            previous_state = current_state;
+            vTaskDelay(pdMS_TO_TICKS(20));
+            continue;
+        }
 
         if ((pressed & INPUT_BUTTON_B) && state.screen == LAUNCHER_SCREEN_ROMS) {
             state.screen = LAUNCHER_SCREEN_SYSTEMS;
@@ -234,7 +269,8 @@ static void launcher_task(void *arg)
 
                    if (!emulator_manager_start(rom))
                     {
-                        launcher_render();
+                        error_visible = true;
+                        launcher_render_error(rom);
                     }
                 }
             }
