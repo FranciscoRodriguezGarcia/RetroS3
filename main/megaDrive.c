@@ -1,4 +1,5 @@
 #include "megaDrive.h"
+#include "emulator_diag.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -632,6 +633,7 @@ static unsigned char *cargar_rom(
     FILE *f = fopen(path, "rb");
 
     if (f == NULL) {
+        emulator_diag_set(EMU_DIAG_SD_OPEN, "No se pudo abrir archivo MD");
         ESP_LOGE(TAG, "No pude abrir ROM: %s", path);
         return NULL;
     }
@@ -641,6 +643,7 @@ static unsigned char *cargar_rom(
     long size = ftell(f);
 
     if (size <= 0 || size > MAX_ROM_SIZE) {
+        emulator_diag_set(EMU_DIAG_ROM_INVALID, "Tamano MD invalido");
         ESP_LOGE(TAG, "Tamanio ROM invalido");
         fclose(f);
         return NULL;
@@ -661,6 +664,7 @@ static unsigned char *cargar_rom(
         );
 
     if (buffer == NULL) {
+        emulator_diag_set(EMU_DIAG_MEMORY, "PSRAM para archivo MD");
         ESP_LOGE(TAG, "No pude reservar PSRAM");
         fclose(f);
         return NULL;
@@ -672,6 +676,7 @@ static unsigned char *cargar_rom(
     fclose(f);
 
     if (leidos != size) {
+        emulator_diag_set(EMU_DIAG_SD_READ, "Lectura incompleta MD");
         ESP_LOGE(
             TAG,
             "Lectura incompleta: %u/%ld",
@@ -746,6 +751,7 @@ bool megadrive_start(const char *rom_path)
 
         if (framebuffers[i] == NULL)
         {
+            emulator_diag_set(EMU_DIAG_MEMORY, "Framebuffer MD sin PSRAM");
             ESP_LOGE(
                 TAG,
                 "No pude reservar framebuffer %d",
@@ -764,6 +770,7 @@ bool megadrive_start(const char *rom_path)
         source_buffers[i] = heap_caps_calloc(1, MD_SOURCE_BYTES,
                                            MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
         if (source_buffers[i] == NULL) {
+            emulator_diag_set(EMU_DIAG_MEMORY, "Buffer RGB MD sin PSRAM");
             ESP_LOGE(TAG, "No pude reservar buffer RGB Gwenesis %d", i);
             return false;
         }
@@ -784,6 +791,7 @@ bool megadrive_start(const char *rom_path)
 
         if (dma_buffers[i] == NULL)
         {
+            emulator_diag_set(EMU_DIAG_MEMORY, "DMA interno MD insuficiente");
             ESP_LOGE(
                 TAG,
                 "No pude reservar DMA buffer %d",
@@ -809,6 +817,7 @@ bool megadrive_start(const char *rom_path)
     if (free_frames == NULL ||
         ready_frames == NULL)
     {
+        emulator_diag_set(EMU_DIAG_MEMORY, "Colas FreeRTOS MD");
         ESP_LOGE(
             TAG,
             "Error creando queues"
