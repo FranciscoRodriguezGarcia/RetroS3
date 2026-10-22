@@ -44,6 +44,12 @@ static emulator_system_t detectar_sistema(
         return SYSTEM_NES;
     }
 
+    if (strcasecmp(ext, ".md") == 0 ||
+        strcasecmp(ext, ".gen") == 0)
+    {
+        return SYSTEM_MEGADRIVE;
+    }
+
     return SYSTEM_UNKNOWN;
 }
 
@@ -162,9 +168,12 @@ bool rom_manager_scan(
         "/sdcard/NES"
     );
 
+    escanear_directorio(list, "/sdcard/MegaDrive");
+
     escanear_directorio(list,"/sdcard/Retro53/consolas/gb/juegos");
     escanear_directorio(list,"/sdcard/Retro53/consolas/gbc/juegos");
     escanear_directorio(list,"/sdcard/Retro53/consolas/nes/juegos");
+    escanear_directorio(list,"/sdcard/Retro53/consolas/md/juegos");
 
     ESP_LOGI(
         TAG,
@@ -192,6 +201,9 @@ const char *rom_manager_system_name(
         case SYSTEM_NES:
             return "NES";
 
+        case SYSTEM_MEGADRIVE:
+            return "Mega Drive";
+
         default:
             return "Unknown";
     }
@@ -206,7 +218,8 @@ bool rom_manager_get_systems(const rom_list_t *roms, system_list_t *systems)
     static const struct { emulator_system_t system; const char *path; } folders[] = {
         {SYSTEM_NES,"/sdcard/NES"},
         {SYSTEM_GAMEBOY,"/sdcard/GameBoy"},
-        {SYSTEM_GAMEBOY_COLOR,"/sdcard/GameBoyColor"}
+        {SYSTEM_GAMEBOY_COLOR,"/sdcard/GameBoyColor"},
+        {SYSTEM_MEGADRIVE,"/sdcard/MegaDrive"}
     };
     for (size_t i=0;i<sizeof(folders)/sizeof(folders[0]);i++) {
         struct stat st;

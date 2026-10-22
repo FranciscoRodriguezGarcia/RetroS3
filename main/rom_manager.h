@@ -12,7 +12,8 @@ typedef enum
     SYSTEM_UNKNOWN = 0,
     SYSTEM_GAMEBOY,
     SYSTEM_GAMEBOY_COLOR,
-    SYSTEM_NES
+    SYSTEM_NES,
+    SYSTEM_MEGADRIVE
 } emulator_system_t;
 
 typedef struct

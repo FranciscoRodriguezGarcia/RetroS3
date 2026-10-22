@@ -11,17 +11,20 @@ idf_component_register(
         "input.c"
         "gameboy.c"
         "nes.c"
+        "megaDrive.c"
         "status_led.c"
     INCLUDE_DIRS "."
     REQUIRES
         retro_audio
         gnuboy
         nofrendo
+        gwenesis
         fatfs
         sdmmc
         esp_driver_spi
         esp_lcd
         esp_timer
+        heap
         esp_driver_usb_serial_jtag
         driver
 )

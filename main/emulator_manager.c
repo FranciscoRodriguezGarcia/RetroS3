@@ -2,6 +2,7 @@
 #include "emulator_manager.h"
 #include "gameboy.h"
 #include "nes.h"
+#include "megaDrive.h"
 
 #include "esp_log.h"
 #include <stdatomic.h>
@@ -41,6 +42,11 @@ bool emulator_manager_start(const rom_entry_t *rom)
     running = false;
 
     break;
+
+        case SYSTEM_MEGADRIVE:
+            ESP_LOGI(TAG, "Iniciando Mega Drive: %s", rom->path);
+            ok = megadrive_start(rom->path);
+            break;
 
         default:
             ESP_LOGW(

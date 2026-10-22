@@ -17,8 +17,8 @@
 static const char *TAG = "LAUNCHER";
 
 static launcher_state_t state;
-static ui_animation_t *console_media[4];
-static bool console_attempted[4];
+static ui_animation_t *console_media[SYSTEM_MEGADRIVE + 1];
+static bool console_attempted[SYSTEM_MEGADRIVE + 1];
 static ui_animation_t *game_cover;
 static char game_cover_path[ROM_PATH_MAX];
 #define TITLE_COLUMNS 24
@@ -33,7 +33,7 @@ static struct {
 static void launcher_release_media(void)
 {
     ui_animation_free(game_cover); game_cover=NULL; game_cover_path[0]=0;
-    for (int i=0; i<4; i++) {
+    for (int i=0; i<=SYSTEM_MEGADRIVE; i++) {
         ui_animation_free(console_media[i]); console_media[i]=NULL; console_attempted[i]=false;
     }
 }
@@ -41,7 +41,7 @@ static ui_animation_t *launcher_console_media(void)
 {
     if (!state.systems.count) return NULL;
     emulator_system_t system=state.systems.entries[state.selected_system_index].system;
-    if (system<=SYSTEM_UNKNOWN || system>SYSTEM_NES) return NULL;
+    if (system<=SYSTEM_UNKNOWN || system>SYSTEM_MEGADRIVE) return NULL;
     return console_media[system];
 }
 
@@ -362,11 +362,11 @@ static void launcher_render_systems(void)
     }
     system_entry_t *selected=&state.systems.entries[state.selected_system_index];
     emulator_system_t system=selected->system;
-    if (system>SYSTEM_UNKNOWN && system<=SYSTEM_NES && !console_attempted[system]) {
+    if (system>SYSTEM_UNKNOWN && system<=SYSTEM_MEGADRIVE && !console_attempted[system]) {
         console_attempted[system]=true;
         status_led_set_mode(STATUS_LED_BLINK_FAST);
         display_draw_text(112,108,"CARGANDO...",UI_ACCENT,UI_BG);
-        const char *folder=system==SYSTEM_NES ? "NES" : system==SYSTEM_GAMEBOY_COLOR ? "GameBoyColor" : "GameBoy";
+        const char *folder=system==SYSTEM_MEGADRIVE ? "MegaDrive" : system==SYSTEM_NES ? "NES" : system==SYSTEM_GAMEBOY_COLOR ? "GameBoyColor" : "GameBoy";
         char path[128];
         snprintf(path,sizeof(path),"/sdcard/%s/console.r53a",folder);
         console_media[system]=ui_animation_load(path);

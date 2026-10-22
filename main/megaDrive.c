@@ -1,4 +1,8 @@
 #include "megaDrive.h"
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include "esp_heap_caps.h"
 #include "gwenesis_bus.h"
 #include "m68k.h"
 #include "z80inst.h"
@@ -24,6 +28,9 @@
 
 #define MD_VIDEO_WIDTH   240
 #define MD_VIDEO_HEIGHT  168
+#define MD_SOURCE_WIDTH  320
+#define MD_SOURCE_HEIGHT 240
+#define MD_SOURCE_BYTES  (MD_SOURCE_WIDTH * MD_SOURCE_HEIGHT * 4)
 
 #define MD_VIDEO_PIXELS \
     (MD_VIDEO_WIDTH * MD_VIDEO_HEIGHT)
@@ -49,6 +56,8 @@
 #define FRAMEBUFFER_COUNT 2
 
 static uint16_t *framebuffers[FRAMEBUFFER_COUNT];
+extern int screen_height;
+static uint8_t *source_buffers[FRAMEBUFFER_COUNT];
 static uint16_t *dma_buffers[2];
 
 static QueueHandle_t free_frames;
@@ -172,7 +181,7 @@ void gwenesis_io_get_buttons(void)
 // ------------------------------------------------------------
 
 static void ejecutar_frame(
-    uint16_t *framebuffer,
+    uint8_t *framebuffer,
     bool render_video
 )
 {
@@ -203,9 +212,7 @@ static void ejecutar_frame(
 
     if (render_video)
     {
-        gwenesis_vdp_set_buffer(
-            framebuffer
-        );
+        gwenesis_vdp_set_buffers(framebuffer, NULL);
     }
 
     gwenesis_vdp_render_config();
@@ -245,17 +252,7 @@ static void ejecutar_frame(
         if (render_video &&
             scan_line < screen_height)
         {
-            if ((scan_line & 3) != 3)
-            {
-                int output_line =
-                    scan_line -
-                    (scan_line / 4);
-
-                gwenesis_vdp_render_line(
-                    scan_line,
-                    output_line
-                );
-            }
+            gwenesis_vdp_render_line(scan_line);
         }
 
         /*
@@ -350,6 +347,25 @@ static void preparar_stripe_dma(
                 __builtin_bswap16(
                     src_line[x]
                 );
+        }
+    }
+}
+
+// Gwenesis' host renderer writes 4 bytes per pixel (RGB + padding).
+// Convert to the existing 240x168 RGB565 display pipeline.
+static void convertir_frame(const uint8_t *src, uint16_t *dst)
+{
+    int height = screen_height == 240 ? 240 : 224;
+    int top = (MD_SOURCE_HEIGHT - height) / 2;
+    for (int y = 0; y < MD_VIDEO_HEIGHT; ++y) {
+        int sy = top + (y * height) / MD_VIDEO_HEIGHT;
+        for (int x = 0; x < MD_VIDEO_WIDTH; ++x) {
+            int sx = (x * MD_SOURCE_WIDTH) / MD_VIDEO_WIDTH;
+            const uint8_t *pixel = src + ((sy * MD_SOURCE_WIDTH + sx) * 4);
+            dst[y * MD_VIDEO_WIDTH + x] =
+                ((uint16_t)(pixel[0] & 0xf8) << 8) |
+                ((uint16_t)(pixel[1] & 0xfc) << 3) |
+                (pixel[2] >> 3);
         }
     }
 }
@@ -493,9 +509,11 @@ static void emulation_task(void *arg)
             );
 
             ejecutar_frame(
-                framebuffers[frame_index],
+                source_buffers[frame_index],
                 true
             );
+
+            convertir_frame(source_buffers[frame_index], framebuffers[frame_index]);
 
             xQueueSend(
                 ready_frames,
@@ -622,7 +640,7 @@ static unsigned char *cargar_rom(
 
     long size = ftell(f);
 
-    if (size <= 0) {
+    if (size <= 0 || size > MAX_ROM_SIZE) {
         ESP_LOGE(TAG, "Tamanio ROM invalido");
         fclose(f);
         return NULL;
@@ -742,6 +760,13 @@ bool megadrive_start(const char *rom_path)
             0,
             MD_VIDEO_BYTES
         );
+
+        source_buffers[i] = heap_caps_calloc(1, MD_SOURCE_BYTES,
+                                           MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+        if (source_buffers[i] == NULL) {
+            ESP_LOGE(TAG, "No pude reservar buffer RGB Gwenesis %d", i);
+            return false;
+        }
     }
 
     /*
